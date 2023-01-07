@@ -1,7 +1,6 @@
 {
   "dependencies": {
     "com.unity.collab-proxy": "1.17.7",
-    "com.unity.feature.development": "1.0.2",
     "com.unity.inputsystem": "1.4.4",
     "com.unity.multiplayer.playmode": "0.1.0",
     "com.unity.multiplayer.samples.coop": "https://github.com/Unity-Technologies/com.unity.multiplayer.samples.coop.git?path=/Packages/com.unity.multiplayer.samples.coop#main",

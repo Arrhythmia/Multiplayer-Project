@@ -50,6 +50,34 @@
                     "isPartOfComposite": true
                 }
             ]
+        },
+        {
+            "name": "DevTools",
+            "id": "e7b7e019-6c82-48e6-b700-d8adb18c703b",
+            "actions": [
+                {
+                    "name": "Create Relay",
+                    "type": "Button",
+                    "id": "ef19bc1a-f25c-4d78-a2e3-7314e9d20f6c",
+                    "expectedControlType": "Button",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
+                }
+            ],
+            "bindings": [
+                {
+                    "name": "",
+                    "id": "1b4d16f7-4365-46a4-8c89-3e87578413ea",
+                    "path": "<Keyboard>/k",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "Create Relay",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                }
+            ]
         }
     ],
     "controlSchemes": []
