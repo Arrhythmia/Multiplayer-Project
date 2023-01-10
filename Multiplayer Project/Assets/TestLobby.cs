@@ -5,10 +5,16 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using System.Xml;
+using TMPro;
+using Unity.Netcode;
+using Unity.Netcode.Transports.UTP;
+using Unity.Networking.Transport.Relay;
 using Unity.Services.Authentication;
 using Unity.Services.Core;
 using Unity.Services.Lobbies;
 using Unity.Services.Lobbies.Models;
+using Unity.Services.Relay;
+using Unity.Services.Relay.Models;
 using UnityEngine;
 
 public class TestLobby : MonoBehaviour
@@ -41,7 +47,63 @@ public class TestLobby : MonoBehaviour
         await AuthenticationService.Instance.SignInAnonymouslyAsync();
     }
 
+    [SerializeField] TMP_Text lobbyCode;
 
+    [Command]
+    private async void CreateRelay()
+    {
+        try
+        {
+            Allocation allocation = await RelayService.Instance.CreateAllocationAsync(3);
+
+            string joinCode = await RelayService.Instance.GetJoinCodeAsync(allocation.AllocationId);
+
+            Debug.Log(joinCode);
+
+            lobbyCode.text = joinCode;
+
+            RelayServerData relayServerData = new RelayServerData(allocation, "dtls");
+            NetworkManager.Singleton.GetComponent<UnityTransport>().SetRelayServerData(relayServerData);
+
+            NetworkManager.Singleton.StartHost();
+
+
+            string relayJoinCode = await RelayService.Instance.GetJoinCodeAsync(allocation.AllocationId);
+            UpdateLobbyOptions updateLobbyOptions = new UpdateLobbyOptions
+            {
+                Data = new Dictionary<string, DataObject>
+                {
+                    { "RelayKey", new DataObject(DataObject.VisibilityOptions.Member, relayJoinCode) }
+                }
+            };
+
+            await LobbyService.Instance.UpdateLobbyAsync(joinedLobby.Id, updateLobbyOptions);
+
+        }
+        catch (RelayServiceException e)
+        {
+            Debug.LogException(e);
+        }
+    }
+
+    public async void JoinRelay()
+    {
+        try
+        {
+            string joinCode = joinedLobby.Data["RelayKey"].Value;
+            Debug.Log("Joining relay with " + joinCode);
+            JoinAllocation joinAllocation = await RelayService.Instance.JoinAllocationAsync(joinCode);
+
+            RelayServerData relayServerData = new RelayServerData(joinAllocation, "dtls");
+            NetworkManager.Singleton.GetComponent<UnityTransport>().SetRelayServerData(relayServerData);
+
+            NetworkManager.Singleton.StartClient();
+        }
+        catch (RelayServiceException e)
+        {
+            Debug.LogException(e);
+        }
+    }
     private void Update()
     {
         HandleLobbyHeartbeat();
@@ -97,6 +159,11 @@ public class TestLobby : MonoBehaviour
             Debug.Log("Created lobby: " + lobby.Name + ", " + lobby.MaxPlayers + " , " + lobby.LobbyCode);
 
             PrintPlayers(lobby);
+
+
+            CreateRelay();
+
+            
         }
         catch (LobbyServiceException e)
         {
@@ -139,6 +206,9 @@ public class TestLobby : MonoBehaviour
             Lobby lobby = await Lobbies.Instance.JoinLobbyByCodeAsync(lobbyCode, joinLobbyByCodeOptions);
             joinedLobby = lobby;
             PrintPlayers(lobby);
+
+            JoinRelay();
+
         }
         catch (LobbyServiceException e)
         {
@@ -160,15 +230,21 @@ public class TestLobby : MonoBehaviour
             Lobby lobby = await LobbyService.Instance.QuickJoinLobbyAsync(quickJoinLobbyOptions);
             joinedLobby = lobby;
             PrintPlayers(lobby);
+
+            JoinRelay();
         } catch (LobbyServiceException e)
         {
             Debug.LogError(e);
         }
     }
 
-
-    private void PrintPlayers(Lobby lobby)
+    [Command]
+    private void PrintPlayers(Lobby lobby = null)
     {
+        if (lobby == null)
+        {
+            lobby = joinedLobby;
+        }
         Debug.Log("Players in lobby " + lobby.Name);
         foreach (Player player in lobby.Players)
         {
@@ -183,5 +259,84 @@ public class TestLobby : MonoBehaviour
                 { "PlayerName", new PlayerDataObject(PlayerDataObject.VisibilityOptions.Member, playerName) }
             }
         };
+    }
+
+    [Command]
+    private async void UpdatePlayerName(string newPlayerName)
+    {
+        try
+        {
+            playerName = newPlayerName;
+            await LobbyService.Instance.UpdatePlayerAsync(joinedLobby.Id, AuthenticationService.Instance.PlayerId, new UpdatePlayerOptions
+            {
+                Data = new Dictionary<string, PlayerDataObject>
+            {
+                {
+                    "PlayerName", new PlayerDataObject(PlayerDataObject.VisibilityOptions.Member, newPlayerName)
+                }
+            }
+            });
+        } catch(Exception e)
+        {
+            Debug.LogException(e);
+        }
+        
+    }
+
+    [Command]
+    private async void LeaveLobby()
+    {
+        try
+        {
+            await LobbyService.Instance.RemovePlayerAsync(joinedLobby.Id, AuthenticationService.Instance.PlayerId);
+        } catch (Exception e)
+        {
+            Debug.LogException(e);
+        }
+    }
+
+    [Command]
+    private async void KickPlayer(string playerId)
+    {
+        // Implement later
+        try
+        {
+            await LobbyService.Instance.RemovePlayerAsync(joinedLobby.Id, playerId);
+        }
+        catch (Exception e)
+        {
+            Debug.LogException(e);
+        }
+    }
+
+
+    [Command]
+    private async void MigrateLobbyHost()
+    {
+        // Implement later
+        try
+        {
+            hostLobby = await Lobbies.Instance.UpdateLobbyAsync(hostLobby.Id, new UpdateLobbyOptions
+            {
+                HostId = joinedLobby.Players[1].Id
+            });
+            joinedLobby = hostLobby;
+
+        } catch (Exception e)
+        {
+            Debug.LogException(e);
+        }
+    }
+
+    [Command]
+    private async void DeleteLobby()
+    {
+        try
+        {
+            await LobbyService.Instance.DeleteLobbyAsync(joinedLobby.Id);
+        } catch(Exception e)
+        {
+            Debug.LogException(e);
+        }
     }
 }

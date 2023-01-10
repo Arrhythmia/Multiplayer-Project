@@ -11,7 +11,7 @@ using Unity.Netcode.Transports.UTP;
 using Unity.Networking.Transport.Relay;
 using System.Globalization;
 using TMPro;
-
+using QFSW.QC;
 
 public class TestRelay : MonoBehaviour
 {
@@ -34,6 +34,8 @@ public class TestRelay : MonoBehaviour
             CreateRelay();
         }
     }
+
+    [Command]
     private async void CreateRelay()
     {
         try
