@@ -23,15 +23,19 @@ public class GrapplingHook : NetworkBehaviour
         Camera.main.transform.SetParent(transform);
         playerCamera = GetComponentInChildren<Camera>();
         
+        lr = GetComponent<LineRenderer>();
     }
+    private bool isHooked = false;
     public void OnHook(InputAction.CallbackContext context)
     {
         if (context.performed)
         {
+            isHooked = true;
             Hook();
         }
         if (context.canceled)
         {
+            isHooked= false;
             Destroy(hookSJ);
         }
     }
@@ -90,4 +94,27 @@ public class GrapplingHook : NetworkBehaviour
     }
 
 
+    private LineRenderer lr;
+    private void HandleLineRenderer()
+    {
+        if (isHooked)
+        {
+            if (!lr.enabled)
+            {
+                lr.enabled = true;
+            }
+            lr.SetPosition(0, transform.position + Vector3.up * 0.5f);
+            lr.SetPosition(1, hookSJ.connectedAnchor);
+        }
+        else
+        {
+            lr.enabled= false;
+        }
+    }
+
+    private void Update()
+    {
+
+        HandleLineRenderer();
+    }
 }
